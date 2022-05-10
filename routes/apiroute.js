@@ -1,62 +1,28 @@
-const fs = require('fs');
+const notes = require('express').Router();
+const uuid = require('../helpers/uuid');
+const { readFromFile, writeToFile, readAndAppend } = require('../helpers/fsUtils');
 
-module.exports = function(app) {
- 
-  app.get('/api/notes', function(req, res) {
-    fs.readFile('./db/db.json', (err, data) => {
-      if (err) throw err;
-      dbData = JSON.parse(data);
-      res.send(dbData);
-    });
-  });
+// GET Route for retrieving all the notes
+notes.get('/', (req, res) => {
+    readFromFile('./db/db.json').then((data) => res.json(JSON.parse(data)));
+});
 
-  app.post('/api/notes', function(req, res) {
-    const userNotes = req.body;
+// POST route for adding a note
+notes.post('/', (req,res) => {
+    const {title,text} = req.body;
 
-    fs.readFile('./db/db.json', (err, data) => {
-      if (err) throw err;
-      dbData = JSON.parse(data);
-      dbData.push(userNotes);
-      let number = 1;
-      dbData.forEach((note, index) => {
-        note.id = number;
-        number++;
-        return dbData;
-      });
-      console.log(dbData);
+    if (req.body) {
+        const addNote = {
+            title,
+            text,
+            id: uuid(),
+        };
 
-      stringData = JSON.stringify(dbData);
+        readAndAppend(addNote, './db/db.json');
+        res.json(`Note added successfully`);
+    } else {
+        res.error(`Error adding new note`);
+    }
+});
 
-      fs.writeFile('./db/db.json', stringData, (err, data) => {
-        if (err) throw err;
-      });
-    });
-    res.send('Thank you for your note!');
-  });
-
-  app.delete('/api/notes/:id', function(req, res) {
-
-    const deleteNote = req.params.id;
-    console.log(deleteNote);
-
-    fs.readFile('./db/db.json', (err, data) => {
-      if (err) throw err;
-
-      dbData = JSON.parse(data);
-
-      for (let i = 0; i < dbData.length; i++) {
-        if (dbData[i].id === Number(deleteNote)) {
-          dbData.splice([i], 1);
-        }
-      }
-      console.log(dbData);
-      stringData = JSON.stringify(dbData);
-
-      fs.writeFile('./db/db.json', stringData, (err, data) => {
-        if (err) throw err;
-      });
-    });
-
-    res.status(204).send();
-  });
-};
+module.exports = notes;
